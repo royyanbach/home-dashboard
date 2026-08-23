@@ -13,6 +13,7 @@ A mobile-first web app for browsing front porch camera clips. Browse a live fram
 
 ```sh
 npm install
+cp .env.example .env   # then edit URLs for your environment
 npm run dev
 ```
 
@@ -40,6 +41,7 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 ```
 ├── public/images/   Static assets (e.g. placeholder poster image)
 ├── src/
+│   ├── config.js    Env-backed app configuration
 │   ├── main.jsx     App entry, routes, and screens
 │   └── index.css    Astryx + Tailwind theme imports
 ├── index.html
@@ -48,13 +50,17 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 
 ## Configuration
 
-Clip and media URLs are defined at the top of `src/main.jsx`:
+Copy `.env.example` to `.env` and set:
 
-- **Clips API** — paginated list of recordings
-- **Media host** — base URL for video and thumbnail files
-- **Latest frame** — live JPEG from the camera
+| Variable              | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `VITE_CLIPS_API_URL`  | Paginated clips API base URL                     |
+| `VITE_CLIPS_HOST`     | Media host for video and thumbnail files         |
+| `VITE_CAMERA_ID`      | Camera slug for the live frame (default: `cam1`) |
 
-Update those constants to point at your own endpoints.
+The live frame URL is derived as `{VITE_CLIPS_HOST}/clips/{VITE_CAMERA_ID}/latest-frame.jpg`.
+
+Vite exposes only `VITE_*` variables to the client. Restart the dev server after changing `.env`.
 
 ## AI agents
 

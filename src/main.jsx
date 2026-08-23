@@ -10,12 +10,10 @@ import { Text } from '@astryxdesign/core/Text';
 import { TopNav } from '@astryxdesign/core/TopNav';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { ArrowLeft, ArrowRight, Download, Settings, Share2, X } from 'lucide-react';
+import { config } from './config.js';
 import './index.css';
 
-const porchImage = '/images/front-porch.png';
-const clipsApiUrl = 'https://home-automation-clips-api.royyanbach.workers.dev';
-const clipsHost = 'https://ha-s3.royyanba.ch';
-const latestFrameUrl = 'https://ha-s3.royyanba.ch/clips/cam1/latest-frame.jpg';
+const { clipsApiUrl, clipsHost, latestFrameUrl, porchImage } = config;
 const latestFrame = { id: 'latest-frame', time: 'Live view', group: 'Today', featured: true };
 
 function getGroupLabel(capturedAt) {
