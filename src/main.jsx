@@ -3,16 +3,26 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Theme } from '@astryxdesign/core';
 import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
+import { Stack } from '@astryxdesign/core/Stack';
+import { Switch } from '@astryxdesign/core/Switch';
 import { Text } from '@astryxdesign/core/Text';
 import { TopNav } from '@astryxdesign/core/TopNav';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { ArrowLeft, ArrowRight, Download, Settings, Share2, X } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 import { config } from './config.js';
-import { isPushSupported, subscribeToPushNotifications, syncPushSubscription } from './push.js';
+import {
+  getPushPermission,
+  getPushStatusMessage,
+  isPushSupported,
+  subscribeToPushNotifications,
+  syncPushSubscription,
+  unsubscribeFromPushNotifications,
+} from './push.js';
 import './index.css';
 
 registerSW({ immediate: true });
@@ -94,50 +104,122 @@ function useClips() {
 }
 
 function usePushNotifications() {
-  const [pushState, setPushState] = useState('idle');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(() => getPushPermission() === 'granted');
+  const [pushMessage, setPushMessage] = useState(getPushStatusMessage);
 
   useEffect(() => {
-    if (!isPushSupported()) return;
-    syncPushSubscription().then((subscription) => {
-      if (subscription) setPushState('subscribed');
-    });
-  }, []);
-
-  const enableNotifications = async () => {
     if (!isPushSupported()) {
-      window.alert('Push notifications are not supported in this browser.');
+      setPushMessage(getPushStatusMessage());
       return;
     }
-    setPushState('pending');
+    if (Notification.permission !== 'granted') {
+      setNotificationsEnabled(false);
+      setPushMessage(getPushStatusMessage());
+      return;
+    }
+
+    setIsPushLoading(true);
+    syncPushSubscription()
+      .then((subscription) => {
+        setNotificationsEnabled(Boolean(subscription));
+        setPushMessage(subscription ? null : getPushStatusMessage());
+      })
+      .catch(() => {
+        setNotificationsEnabled(false);
+        setPushMessage(getPushStatusMessage());
+      })
+      .finally(() => setIsPushLoading(false));
+  }, []);
+
+  const setNotifications = async (enabled) => {
+    if (!isPushSupported()) {
+      setPushMessage(getPushStatusMessage());
+      return;
+    }
+    if (enabled && Notification.permission === 'denied') {
+      setPushMessage(getPushStatusMessage());
+      return;
+    }
+
+    setIsPushLoading(true);
+    setPushMessage(null);
     try {
-      await subscribeToPushNotifications();
-      setPushState('subscribed');
+      if (enabled) {
+        await subscribeToPushNotifications();
+        setNotificationsEnabled(true);
+      } else {
+        await unsubscribeFromPushNotifications();
+        setNotificationsEnabled(false);
+      }
     } catch (error) {
-      setPushState('error');
-      window.alert(error.message);
+      setNotificationsEnabled(!enabled);
+      setPushMessage(error.message);
+    } finally {
+      setIsPushLoading(false);
     }
   };
 
-  return { pushState, enableNotifications };
+  return { notificationsEnabled, isPushLoading, pushMessage, setNotifications };
 }
 
-function SettingsButton({ onClick, pushState }) {
-  const label =
-    pushState === 'subscribed'
-      ? 'Notifications enabled'
-      : pushState === 'pending'
-        ? 'Enabling notifications'
-        : 'Enable notifications';
-
+function SettingsButton({ onClick }) {
   return (
     <IconButton
       icon={<Settings />}
-      label={label}
-      tooltip={label}
+      label="Open settings"
+      tooltip="Settings"
       variant="ghost"
       onClick={onClick}
-      isDisabled={pushState === 'pending'}
     />
+  );
+}
+
+function SettingsScreen({ notificationsEnabled, isPushLoading, pushMessage, setNotifications }) {
+  const navigate = useNavigate();
+  const permission = getPushPermission();
+  const isBlocked = permission === 'denied' || permission === 'unsupported';
+  const disabledMessage = isBlocked ? getPushStatusMessage() : undefined;
+
+  return (
+    <main className="mx-auto h-dvh w-full max-w-md overflow-y-auto bg-surface">
+      <TopNav
+        className="sticky top-0 z-10 bg-surface px-4"
+        label="Settings navigation"
+        heading={
+          <IconButton
+            icon={<ArrowLeft />}
+            label="Back"
+            tooltip="Back"
+            variant="ghost"
+            onClick={() => navigate(-1)}
+          />
+        }
+        centerContent={<Heading level={2}>Settings</Heading>}
+      />
+      <section className="px-6 py-4">
+        <Heading level={3}>Notifications</Heading>
+        <Card width="100%" className="mt-4">
+          <Stack gap={4}>
+            <Switch
+              label="Push notifications"
+              description="Receive alerts from your home automations."
+              value={notificationsEnabled}
+              labelPosition="start"
+              labelSpacing="spread"
+              width="100%"
+              isLoading={isPushLoading}
+              isDisabled={isBlocked}
+              disabledMessage={disabledMessage}
+              changeAction={setNotifications}
+              status={
+                pushMessage ? { type: 'error', message: pushMessage } : undefined
+              }
+            />
+          </Stack>
+        </Card>
+      </section>
+    </main>
   );
 }
 
@@ -189,7 +271,7 @@ function SnapshotGridSkeleton({ count = 2 }) {
   );
 }
 
-function HomeScreen({ snapshots, isLoading, error, retry, enableNotifications, pushState }) {
+function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
   const navigate = useNavigate();
   const [latestFrameUrlWithCacheBust] = useState(
     () => `${latestFrameUrl}?cacheBust=${Math.random().toString(36).slice(2)}`,
@@ -209,9 +291,7 @@ function HomeScreen({ snapshots, isLoading, error, retry, enableNotifications, p
         className="sticky top-0 z-10 bg-surface px-6"
         label="Home navigation"
         heading={<Heading level={2}>Home</Heading>}
-        endContent={
-          <SettingsButton onClick={enableNotifications} pushState={pushState} />
-        }
+        endContent={<SettingsButton onClick={openSettings} />}
       />
       <section className="px-6 pb-10">
         <section className="mt-3">
@@ -287,8 +367,7 @@ function HistoryScreen({
   error,
   retry,
   loadMore,
-  enableNotifications,
-  pushState,
+  openSettings,
 }) {
   const navigate = useNavigate();
   const groupedSnapshots = snapshots.reduce((groups, snapshot) => {
@@ -304,9 +383,7 @@ function HistoryScreen({
         label="Front Porch navigation"
         heading={<IconButton icon={<ArrowLeft />} label="Back to home" tooltip="Back" variant="ghost" onClick={() => navigate('/')} />}
         centerContent={<Heading level={2}>Front Porch</Heading>}
-        endContent={
-          <SettingsButton onClick={enableNotifications} pushState={pushState} />
-        }
+        endContent={<SettingsButton onClick={openSettings} />}
       />
       <section className="space-y-8 px-6 py-2">
         {isLoading && (
@@ -471,12 +548,15 @@ function DetailScreen({ snapshots, isLoading }) {
 function App() {
   const clips = useClips();
   const push = usePushNotifications();
-  const screenProps = { ...clips, ...push };
+  const navigate = useNavigate();
+  const openSettings = () => navigate('/settings');
+  const screenProps = { ...clips, openSettings };
   return (
     <Theme theme={neutralTheme}>
       <Routes>
         <Route path="/" element={<HomeScreen {...screenProps} />} />
         <Route path="/snapshots" element={<HistoryScreen {...screenProps} />} />
+        <Route path="/settings" element={<SettingsScreen {...push} />} />
         <Route
           path="/snapshots/:snapshotId"
           element={<DetailScreen snapshots={clips.snapshots} isLoading={clips.isLoading} />}
