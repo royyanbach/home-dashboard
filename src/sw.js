@@ -53,6 +53,7 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: data.icon ?? '/pwa-192x192.png',
       badge: data.badge ?? '/pwa-192x192.png',
+      image: data.image,
       tag: data.tag,
       data: data.data,
     }),

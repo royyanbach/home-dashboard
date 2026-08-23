@@ -67,6 +67,11 @@ export async function sendPushNotifications(request, env) {
   const messageBody = typeof body.body === 'string' ? body.body : '';
   const url = typeof body.url === 'string' ? body.url : '/';
   const tag = typeof body.tag === 'string' ? body.tag : undefined;
+  const image = typeof body.image === 'string' && body.image.startsWith('https://') ? body.image : undefined;
+  const icon =
+    typeof body.icon === 'string' && (body.icon.startsWith('https://') || body.icon.startsWith('/'))
+      ? body.icon
+      : '/pwa-192x192.png';
 
   const { results: subscriptions } = await env.DB.prepare(
     'SELECT endpoint, p256dh, auth FROM push_subscriptions ORDER BY id ASC',
@@ -84,8 +89,9 @@ export async function sendPushNotifications(request, env) {
   const payload = {
     title,
     body: messageBody,
-    icon: '/pwa-192x192.png',
+    icon,
     badge: '/pwa-192x192.png',
+    image,
     tag,
     data: { url },
   };

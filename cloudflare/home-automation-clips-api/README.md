@@ -102,9 +102,17 @@ Content-Type: application/json
   "title": "Motion detected",
   "body": "Front porch camera saw activity.",
   "url": "/",
-  "tag": "front-porch-motion"
+  "tag": "front-porch-motion",
+  "image": "https://media.example.com/clips/cam1/event-123.jpg"
 }
 ```
+
+Optional fields:
+
+| Field | Description |
+| ----- | ----------- |
+| `image` | Large landscape image (HTTPS URL). Shown as the notification banner on supported platforms. |
+| `icon` | Small square icon. Defaults to the PWA icon. |
 
 Response:
 
