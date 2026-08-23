@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "home-automation-clips-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "home-automation",
+      "database_id": "cd525f12-cb1b-4b7a-ae73-0c1ffa138127",
+    },
+  ],
+  "vars": {
+    "MQTT_HOST": "eb9ccdccc7934d26a2cec5f58338297e.s1.eu.hivemq.cloud",
+    "MQTT_PORT": "8883",
+    "MQTT_TLS": "true",
+    "MQTT_TOPIC": "home/automation/latest-cam1-clip",
+    "MQTT_USERNAME": "nyamoekkk",
+  },
+}

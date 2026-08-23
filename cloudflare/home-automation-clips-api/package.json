@@ -1,0 +1,8 @@
+{
+  "name": "home-automation-clips-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "npx wrangler deploy --keep-vars"
+  }
+}

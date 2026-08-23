@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "r2-to-d1-importer",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-23",
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "home-automation" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "home-automation",
+      "database_id": "cd525f12-cb1b-4b7a-ae73-0c1ffa138127",
+      "migrations_dir": "migrations",
+    },
+  ],
+}
