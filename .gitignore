@@ -23,3 +23,5 @@ dist/
 
 # Local overrides
 *.local
+
+wrangler.jsonc
