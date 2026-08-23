@@ -28,6 +28,24 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 | `npm run preview` | Serve the production build locally   |
 | `npm run format`  | Format the codebase with Prettier    |
 
+## Progressive Web App
+
+This project is configured as a PWA via [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/).
+
+- **Installable** — add to your home screen from mobile Safari or Chrome.
+- **Offline app shell** — the UI loads from cache; clips and live frames use network-first caching when configured.
+- **Auto-updates** — new deployments refresh the service worker in the background.
+
+After `npm run build`, verify locally:
+
+```sh
+npm run preview
+```
+
+Then open DevTools → Application → Manifest / Service Workers, or use Lighthouse’s PWA audit.
+
+PWA icons live in `public/` (`pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png`, `favicon.png`), generated from `public/images/logo.jpeg`.
+
 ## Routes
 
 | Path                    | Screen                                      |

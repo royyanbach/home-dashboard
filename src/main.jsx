@@ -10,8 +10,11 @@ import { Text } from '@astryxdesign/core/Text';
 import { TopNav } from '@astryxdesign/core/TopNav';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { ArrowLeft, ArrowRight, Download, Settings, Share2, X } from 'lucide-react';
+import { registerSW } from 'virtual:pwa-register';
 import { config } from './config.js';
 import './index.css';
+
+registerSW({ immediate: true });
 
 const { clipsApiUrl, clipsHost, latestFrameUrl, porchImage } = config;
 const latestFrame = { id: 'latest-frame', time: 'Live view', group: 'Today', featured: true };
