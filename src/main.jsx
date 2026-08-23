@@ -7,6 +7,7 @@ import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
+import { Spinner } from '@astryxdesign/core/Spinner';
 import { Stack } from '@astryxdesign/core/Stack';
 import { Switch } from '@astryxdesign/core/Switch';
 import { Text } from '@astryxdesign/core/Text';
@@ -229,6 +230,7 @@ function SnapshotTile({
   large = false,
   imageUrl,
   imageAlt = 'Front porch camera snapshot',
+  showRefreshSpinner = false,
 }) {
   const resolvedImageUrl = imageUrl ?? snapshot.frameUrl ?? porchImage;
 
@@ -238,6 +240,7 @@ function SnapshotTile({
       onClick={() => onOpen(snapshot)}
       className={`group relative overflow-hidden rounded-lg bg-muted text-left shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${large ? 'aspect-video w-full' : 'aspect-square w-full'}`}
       aria-label={`Open snapshot captured at ${snapshot.time}`}
+      aria-busy={showRefreshSpinner || undefined}
     >
       <img
         src={resolvedImageUrl}
@@ -251,6 +254,11 @@ function SnapshotTile({
       <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-10 text-sm font-medium text-white">
         {snapshot.time}
       </span>
+      {showRefreshSpinner && (
+        <span className="absolute bottom-3 right-3">
+          <Spinner size="sm" shade="onMedia" aria-label="Refreshing latest frame" />
+        </span>
+      )}
     </button>
   );
 }
@@ -276,13 +284,16 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
   const [latestFrameUrlWithCacheBust] = useState(
     () => `${latestFrameUrl}?cacheBust=${Math.random().toString(36).slice(2)}`,
   );
-  const [isLatestFrameReady, setIsLatestFrameReady] = useState(false);
+  const [useCacheBustedFrame, setUseCacheBustedFrame] = useState(false);
   const earlierSnapshots = snapshots.slice(0, 2);
+  const displayedLatestFrameUrl = useCacheBustedFrame
+    ? latestFrameUrlWithCacheBust
+    : latestFrameUrl;
   const openLatestFrame = () =>
-    window.open(latestFrameUrlWithCacheBust, '_blank', 'noopener,noreferrer');
+    window.open(displayedLatestFrameUrl, '_blank', 'noopener,noreferrer');
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsLatestFrameReady(true), 15000);
+    const timer = window.setTimeout(() => setUseCacheBustedFrame(true), 15000);
     return () => window.clearTimeout(timer);
   }, []);
   return (
@@ -297,23 +308,14 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
         <section className="mt-3">
           <Heading level={2}>Front Porch</Heading>
           <section className="mt-6">
-            {isLatestFrameReady ? (
-              <SnapshotTile
-                snapshot={latestFrame}
-                onOpen={openLatestFrame}
-                imageUrl={latestFrameUrlWithCacheBust}
-                imageAlt="Latest Front Porch camera frame"
-                large
-              />
-            ) : (
-              <section
-                className="aspect-video w-full"
-                aria-label="Loading latest Front Porch frame"
-                aria-busy="true"
-              >
-                <Skeleton width="100%" height="100%" radius={4} />
-              </section>
-            )}
+            <SnapshotTile
+              snapshot={latestFrame}
+              onOpen={openLatestFrame}
+              imageUrl={displayedLatestFrameUrl}
+              imageAlt="Latest Front Porch camera frame"
+              showRefreshSpinner={!useCacheBustedFrame}
+              large
+            />
           </section>
         </section>
         <section className="mt-10">
