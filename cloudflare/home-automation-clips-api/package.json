@@ -4,5 +4,8 @@
   "type": "module",
   "scripts": {
     "deploy": "npx wrangler deploy --keep-vars"
+  },
+  "dependencies": {
+    "@pushforge/builder": "^2.0.5"
   }
 }

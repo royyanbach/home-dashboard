@@ -1,6 +1,6 @@
 # Home automation clips API
 
-Public, read-only API for the existing D1 `home-automation-clips` table.
+Public, read-only API for the existing D1 `home-automation-clips` table, plus push notification endpoints for the Home Dashboard PWA.
 
 ## Deploy
 
@@ -12,6 +12,8 @@ The D1 binding in `wrangler.jsonc` is already configured for the existing
 `home-automation` database.
 
 ## Use
+
+### List clips
 
 ```text
 GET https://YOUR_WORKER.workers.dev/?page=1&page_size=20
@@ -41,6 +43,84 @@ Example response:
     "previous_page": null
   }
 }
+```
+
+### Push notifications
+
+Create the subscriptions table once:
+
+```sh
+npx wrangler d1 execute home-automation --remote --file=migrations/0001_push_subscriptions.sql
+```
+
+Generate VAPID keys and configure the worker:
+
+```sh
+npx @pushforge/builder vapid
+```
+
+1. Put the **public key** in `wrangler.jsonc` as `VAPID_PUBLIC_KEY`.
+2. Set the **private JWK JSON** as an encrypted secret:
+
+   ```sh
+   npx wrangler secret put VAPID_PRIVATE_KEY
+   ```
+
+3. Set a bearer token for the send endpoint:
+
+   ```sh
+   npx wrangler secret put PUSH_API_SECRET
+   ```
+
+4. Update `VAPID_SUBJECT` in `wrangler.jsonc` to a `mailto:` or `https:` contact URI.
+
+#### Register a device (PWA)
+
+The dashboard PWA calls this automatically after the user grants notification permission.
+
+```text
+POST https://YOUR_WORKER.workers.dev/push/subscribe
+Content-Type: application/json
+
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "...",
+    "auth": "..."
+  }
+}
+```
+
+#### Send a notification
+
+```text
+POST https://YOUR_WORKER.workers.dev/push/send
+Authorization: Bearer YOUR_PUSH_API_SECRET
+Content-Type: application/json
+
+{
+  "title": "Motion detected",
+  "body": "Front porch camera saw activity.",
+  "url": "/",
+  "tag": "front-porch-motion"
+}
+```
+
+Response:
+
+```json
+{
+  "sent": 1,
+  "failed": 0,
+  "removed": 0,
+  "total": 1
+}
+```
+
+#### Public VAPID key
+
+```text
+GET https://YOUR_WORKER.workers.dev/push/vapid-public-key
 ```
 
 ## MQTT on page 1

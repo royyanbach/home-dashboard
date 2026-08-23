@@ -1,4 +1,5 @@
 import { connect } from 'cloudflare:sockets';
+import { getVapidPublicKey, saveSubscription, sendPushNotifications } from './push.js';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -6,7 +7,8 @@ const encoder = new TextEncoder();
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 };
 
 function json(data, init = {}) {
@@ -143,63 +145,112 @@ async function publishMqtt(env, message) {
   }
 }
 
-export default {
-  async fetch(request, env) {
-    if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-    if (request.method !== 'GET') return json({ error: 'Method not allowed' }, { status: 405 });
+async function handleListClips(request, env, url) {
+  if (request.method !== 'GET') return json({ error: 'Method not allowed' }, { status: 405 });
 
-    const url = new URL(request.url);
-    const page = parsePositiveInteger(url.searchParams.get('page'), 1);
-    const pageSize = parsePositiveInteger(url.searchParams.get('page_size'), DEFAULT_PAGE_SIZE);
-    if (
-      !page ||
-      !pageSize ||
-      pageSize > MAX_PAGE_SIZE ||
-      page > Math.floor(Number.MAX_SAFE_INTEGER / pageSize)
-    ) {
-      return json(
-        { error: 'page must be positive; page_size must be between 1 and 100' },
-        { status: 400 },
-      );
-    }
+  const page = parsePositiveInteger(url.searchParams.get('page'), 1);
+  const pageSize = parsePositiveInteger(url.searchParams.get('page_size'), DEFAULT_PAGE_SIZE);
+  if (
+    !page ||
+    !pageSize ||
+    pageSize > MAX_PAGE_SIZE ||
+    page > Math.floor(Number.MAX_SAFE_INTEGER / pageSize)
+  ) {
+    return json(
+      { error: 'page must be positive; page_size must be between 1 and 100' },
+      { status: 400 },
+    );
+  }
 
-    try {
-      const offset = (page - 1) * pageSize;
-      const [countQuery, clipsQuery] = await env.DB.batch([
-        env.DB.prepare('SELECT COUNT(*) AS total FROM "home-automation-clips"'),
-        env.DB.prepare(
-          `
+  try {
+    const offset = (page - 1) * pageSize;
+    const [countQuery, clipsQuery] = await env.DB.batch([
+      env.DB.prepare('SELECT COUNT(*) AS total FROM "home-automation-clips"'),
+      env.DB.prepare(
+        `
           SELECT id, file_name, created_at
           FROM "home-automation-clips"
           ORDER BY created_at DESC, id DESC
           LIMIT ? OFFSET ?
         `,
-        ).bind(pageSize, offset),
-      ]);
-      const totalItems = countQuery.results[0].total;
-      const totalPages = Math.ceil(totalItems / pageSize);
+      ).bind(pageSize, offset),
+    ]);
+    const totalItems = countQuery.results[0].total;
+    const totalPages = Math.ceil(totalItems / pageSize);
 
-      const response = {
-        items: clipsQuery.results,
-        pagination: {
-          page,
-          page_size: pageSize,
-          total_items: totalItems,
-          total_pages: totalPages,
-          next_page: page < totalPages ? page + 1 : null,
-          previous_page: page > 1 ? page - 1 : null,
-        },
-      };
-      if (page === 1) {
-        await publishMqtt(env, {
-          event: 'latest_cam_snapshot_requested',
-          requested_at: new Date().toISOString(),
-        });
-      }
-      return json(response);
-    } catch (error) {
-      console.error(JSON.stringify({ message: 'Failed to list clips', error: String(error) }));
-      return json({ error: 'Unable to list clips' }, { status: 500 });
+    const response = {
+      items: clipsQuery.results,
+      pagination: {
+        page,
+        page_size: pageSize,
+        total_items: totalItems,
+        total_pages: totalPages,
+        next_page: page < totalPages ? page + 1 : null,
+        previous_page: page > 1 ? page - 1 : null,
+      },
+    };
+    if (page === 1) {
+      await publishMqtt(env, {
+        event: 'latest_cam_snapshot_requested',
+        requested_at: new Date().toISOString(),
+      });
     }
+    return json(response);
+  } catch (error) {
+    console.error(JSON.stringify({ message: 'Failed to list clips', error: String(error) }));
+    return json({ error: 'Unable to list clips' }, { status: 500 });
+  }
+}
+
+async function handlePushRoute(request, env, path) {
+  if (path === '/push/vapid-public-key') {
+    if (request.method !== 'GET') return json({ error: 'Method not allowed' }, { status: 405 });
+    try {
+      return json(await getVapidPublicKey(env));
+    } catch (error) {
+      return json({ error: String(error) }, { status: 503 });
+    }
+  }
+
+  if (path === '/push/subscribe') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 });
+    try {
+      const result = await saveSubscription(request, env);
+      if (result.error) return json({ error: result.error }, { status: result.status ?? 400 });
+      return json(result);
+    } catch (error) {
+      console.error(JSON.stringify({ message: 'Failed to save push subscription', error: String(error) }));
+      return json({ error: 'Unable to save push subscription' }, { status: 500 });
+    }
+  }
+
+  if (path === '/push/send') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 });
+    try {
+      const result = await sendPushNotifications(request, env);
+      if (result.error) return json({ error: result.error }, { status: result.status ?? 400 });
+      return json(result);
+    } catch (error) {
+      console.error(JSON.stringify({ message: 'Failed to send push notifications', error: String(error) }));
+      return json({ error: 'Unable to send push notifications' }, { status: 500 });
+    }
+  }
+
+  return null;
+}
+
+export default {
+  async fetch(request, env) {
+    if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+
+    const pushResponse = await handlePushRoute(request, env, path);
+    if (pushResponse) return pushResponse;
+
+    if (path === '/') return handleListClips(request, env, url);
+
+    return json({ error: 'Not found' }, { status: 404 });
   },
 };
