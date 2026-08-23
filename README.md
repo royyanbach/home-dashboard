@@ -44,7 +44,7 @@ npm run preview
 
 Then open DevTools → Application → Manifest / Service Workers, or use Lighthouse’s PWA audit.
 
-PWA icons live in `public/` (`pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png`, `favicon.png`), generated from `public/images/logo.jpeg`.
+PWA icons live in `public/` (`pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png`, `favicon.png`), generated from `public/images/logo.png`.
 
 ## Routes
 
