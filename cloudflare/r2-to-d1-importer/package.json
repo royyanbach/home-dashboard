@@ -1,9 +1,0 @@
-{
-  "name": "r2-to-d1-importer",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "deploy": "npx wrangler deploy",
-    "migrate": "npx wrangler d1 migrations apply DB --remote"
-  }
-}
