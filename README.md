@@ -1,6 +1,6 @@
 # Home Dashboard
 
-A mobile-first web app for browsing front porch camera clips. Browse a live frame, recent snapshots, and full clip history with inline video playback.
+My personal mobile web dashboard for home automations
 
 ## Stack
 
