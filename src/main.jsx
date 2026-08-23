@@ -12,6 +12,7 @@ import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { ArrowLeft, ArrowRight, Download, Settings, Share2, X } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 import { config } from './config.js';
+import { isPushSupported, subscribeToPushNotifications, syncPushSubscription } from './push.js';
 import './index.css';
 
 registerSW({ immediate: true });
@@ -92,6 +93,54 @@ function useClips() {
   };
 }
 
+function usePushNotifications() {
+  const [pushState, setPushState] = useState('idle');
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    syncPushSubscription().then((subscription) => {
+      if (subscription) setPushState('subscribed');
+    });
+  }, []);
+
+  const enableNotifications = async () => {
+    if (!isPushSupported()) {
+      window.alert('Push notifications are not supported in this browser.');
+      return;
+    }
+    setPushState('pending');
+    try {
+      await subscribeToPushNotifications();
+      setPushState('subscribed');
+    } catch (error) {
+      setPushState('error');
+      window.alert(error.message);
+    }
+  };
+
+  return { pushState, enableNotifications };
+}
+
+function SettingsButton({ onClick, pushState }) {
+  const label =
+    pushState === 'subscribed'
+      ? 'Notifications enabled'
+      : pushState === 'pending'
+        ? 'Enabling notifications'
+        : 'Enable notifications';
+
+  return (
+    <IconButton
+      icon={<Settings />}
+      label={label}
+      tooltip={label}
+      variant="ghost"
+      onClick={onClick}
+      isDisabled={pushState === 'pending'}
+    />
+  );
+}
+
 function SnapshotTile({
   snapshot,
   onOpen,
@@ -140,7 +189,7 @@ function SnapshotGridSkeleton({ count = 2 }) {
   );
 }
 
-function HomeScreen({ snapshots, isLoading, error, retry }) {
+function HomeScreen({ snapshots, isLoading, error, retry, enableNotifications, pushState }) {
   const navigate = useNavigate();
   const [latestFrameUrlWithCacheBust] = useState(
     () => `${latestFrameUrl}?cacheBust=${Math.random().toString(36).slice(2)}`,
@@ -160,7 +209,9 @@ function HomeScreen({ snapshots, isLoading, error, retry }) {
         className="sticky top-0 z-10 bg-surface px-6"
         label="Home navigation"
         heading={<Heading level={2}>Home</Heading>}
-        endContent={<IconButton icon={<Settings />} label="Open settings" tooltip="Settings" variant="ghost" />}
+        endContent={
+          <SettingsButton onClick={enableNotifications} pushState={pushState} />
+        }
       />
       <section className="px-6 pb-10">
         <section className="mt-3">
@@ -236,6 +287,8 @@ function HistoryScreen({
   error,
   retry,
   loadMore,
+  enableNotifications,
+  pushState,
 }) {
   const navigate = useNavigate();
   const groupedSnapshots = snapshots.reduce((groups, snapshot) => {
@@ -251,7 +304,9 @@ function HistoryScreen({
         label="Front Porch navigation"
         heading={<IconButton icon={<ArrowLeft />} label="Back to home" tooltip="Back" variant="ghost" onClick={() => navigate('/')} />}
         centerContent={<Heading level={2}>Front Porch</Heading>}
-        endContent={<IconButton icon={<Settings />} label="Open settings" tooltip="Settings" variant="ghost" />}
+        endContent={
+          <SettingsButton onClick={enableNotifications} pushState={pushState} />
+        }
       />
       <section className="space-y-8 px-6 py-2">
         {isLoading && (
@@ -415,16 +470,18 @@ function DetailScreen({ snapshots, isLoading }) {
 
 function App() {
   const clips = useClips();
+  const push = usePushNotifications();
+  const screenProps = { ...clips, ...push };
   return (
     <Theme theme={neutralTheme}>
       <Routes>
-        <Route path="/" element={<HomeScreen {...clips} />} />
-        <Route path="/snapshots" element={<HistoryScreen {...clips} />} />
+        <Route path="/" element={<HomeScreen {...screenProps} />} />
+        <Route path="/snapshots" element={<HistoryScreen {...screenProps} />} />
         <Route
           path="/snapshots/:snapshotId"
           element={<DetailScreen snapshots={clips.snapshots} isLoading={clips.isLoading} />}
         />
-        <Route path="*" element={<HomeScreen {...clips} />} />
+        <Route path="*" element={<HomeScreen {...screenProps} />} />
       </Routes>
     </Theme>
   );
