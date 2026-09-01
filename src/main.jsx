@@ -492,6 +492,7 @@ function DetailScreen({ snapshots, isLoading }) {
         </Text>
       </main>
     );
+  const alertPosterUrl = snapshot.videoUrl.replace(/\.mp4$/i, '-alert.jpg');
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-hidden bg-black text-white">
       <header className="flex items-center justify-end p-5">
@@ -509,7 +510,7 @@ function DetailScreen({ snapshots, isLoading }) {
           controls
           playsInline
           preload="metadata"
-          poster={porchImage}
+          poster={alertPosterUrl}
           aria-label="Front porch camera recording"
         >
           <source src={snapshot.videoUrl} type="video/mp4" />
