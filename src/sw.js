@@ -51,24 +51,9 @@ function toAbsoluteUrl(value) {
   }
 }
 
-async function resolveNotificationImage(imageUrl) {
-  const absolute = toAbsoluteUrl(imageUrl);
-  if (!absolute || !absolute.startsWith('https://')) return undefined;
-
-  try {
-    const response = await fetch(absolute, {
-      mode: 'cors',
-      credentials: 'omit',
-      cache: 'no-store',
-    });
-    if (!response.ok) return undefined;
-    const blob = await response.blob();
-    if (!blob.type.startsWith('image/')) return absolute;
-    return URL.createObjectURL(blob);
-  } catch {
-    // Cross-origin hosts without CORS still work for Notification.image in Chrome.
-    return absolute;
-  }
+function toNotificationImageUrl(value) {
+  const absolute = toAbsoluteUrl(value);
+  return absolute?.startsWith('https://') ? absolute : undefined;
 }
 
 self.addEventListener('push', (event) => {
@@ -78,17 +63,14 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    (async () => {
-      const image = await resolveNotificationImage(data.image);
-      return self.registration.showNotification(data.title ?? 'Home Dashboard', {
-        body: data.body,
-        icon: toAbsoluteUrl(data.icon ?? '/pwa-192x192.png'),
-        badge: toAbsoluteUrl(data.badge ?? '/pwa-192x192.png'),
-        image,
-        tag: data.tag,
-        data: data.data,
-      });
-    })(),
+    self.registration.showNotification(data.title ?? 'Home Dashboard', {
+      body: data.body,
+      icon: toAbsoluteUrl(data.icon ?? '/pwa-192x192.png'),
+      badge: toAbsoluteUrl(data.badge ?? '/pwa-192x192.png'),
+      image: toNotificationImageUrl(data.image),
+      tag: data.tag,
+      data: data.data,
+    }),
   );
 });
 
