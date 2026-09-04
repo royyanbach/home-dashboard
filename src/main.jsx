@@ -28,7 +28,29 @@ import {
 } from './push.js';
 import './index.css';
 
+const themeColors = {
+  light: '#FFFFFF',
+  dark: '#1F1F22',
+};
+
+function syncThemeColorWithSystemTheme() {
+  const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const fallbackThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
+
+  const updateThemeColor = () => {
+    fallbackThemeColor?.setAttribute('content', colorScheme.matches ? themeColors.dark : themeColors.light);
+  };
+
+  updateThemeColor();
+  if (colorScheme.addEventListener) {
+    colorScheme.addEventListener('change', updateThemeColor);
+  } else {
+    colorScheme.addListener(updateThemeColor);
+  }
+}
+
 registerSW({ immediate: true });
+syncThemeColorWithSystemTheme();
 
 const { buildCommitSha, clipsApiUrl, clipsHost, liveHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
 const cameraIds = ['cam1', 'cam2', 'cam3'];
