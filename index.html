@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Personal mobile web dashboard for home automations" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#FFFFFF" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1F1F22" />
+    <meta id="theme-color" name="theme-color" content="#1F1F22" />
+    <script>
+      document
+        .getElementById('theme-color')
+        .setAttribute('content', matchMedia('(prefers-color-scheme: dark)').matches ? '#1F1F22' : '#FFFFFF');
+    </script>
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Home Dashboard</title>

@@ -35,10 +35,10 @@ const themeColors = {
 
 function syncThemeColorWithSystemTheme() {
   const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
-  const fallbackThemeColor = document.querySelector('meta[name="theme-color"]:not([media])');
+  const themeColor = document.getElementById('theme-color');
 
   const updateThemeColor = () => {
-    fallbackThemeColor?.setAttribute('content', colorScheme.matches ? themeColors.dark : themeColors.light);
+    themeColor?.setAttribute('content', colorScheme.matches ? themeColors.dark : themeColors.light);
   };
 
   updateThemeColor();
