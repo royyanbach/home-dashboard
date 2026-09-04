@@ -11,6 +11,7 @@ const cameraId = import.meta.env.VITE_CAMERA_ID ?? 'cam1';
 export const config = {
   clipsApiUrl: requireEnv('VITE_CLIPS_API_URL'),
   clipsHost,
+  liveHost,
   liveStreamUrl: `${liveHost}/${cameraId}-live`,
   liveSnapshotUrl: `${liveHost}/${cameraId}-snapshot`,
   porchImage: '/images/front-porch.png',

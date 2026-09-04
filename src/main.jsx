@@ -2,8 +2,10 @@ import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Theme } from '@astryxdesign/core';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
+import { Carousel } from '@astryxdesign/core/Carousel';
 import { Heading } from '@astryxdesign/core/Heading';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
@@ -28,7 +30,14 @@ import './index.css';
 
 registerSW({ immediate: true });
 
-const { clipsApiUrl, clipsHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
+const { clipsApiUrl, clipsHost, liveHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
+const cameraIds = ['cam1', 'cam2', 'cam3'];
+const cameraTitles = {
+  cam1: 'Front Porch',
+  cam2: 'Front Yard 1',
+  cam3: 'Front Yard 2',
+};
+const cameraDetailPosterUrl = `${liveHost}/cam2-snapshot`;
 
 function getGroupLabel(capturedAt) {
   const today = new Date();
@@ -240,66 +249,69 @@ function LiveView() {
   };
 
   return (
-    <section
-      className="group relative aspect-video w-full overflow-hidden rounded-lg bg-muted shadow-sm"
+    <AspectRatio
+      ratio={16 / 9}
+      className="group overflow-hidden rounded-lg bg-muted shadow-sm"
       aria-label="Front Porch live camera"
       onClick={() => setShowControls((visible) => !visible)}
     >
-      <img
-        src={liveSnapshotUrl}
-        alt=""
-        aria-hidden="true"
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = porchImage;
-        }}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      <video
-        ref={videoRef}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
-        src={liveStreamUrl}
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        poster={liveSnapshotUrl}
-        onPlaying={() => setIsPlaying(true)}
-        aria-label="Front Porch live stream"
-      />
-      <span className="absolute bottom-3 right-3 flex size-2.5 items-center justify-center">
-        {!isPlaying ? (
-          <Spinner size="sm" shade="onMedia" aria-label="Loading live stream" />
-        ) : (
-          <span
-            className="relative inline-flex size-2.5 items-center justify-center"
-            role="status"
-            aria-label="Live"
-          >
-            <span
-              className="absolute inset-0 animate-pulse rounded-full border-2 border-error"
-              aria-hidden="true"
-            />
-            <span className="size-1 rounded-full bg-error" aria-hidden="true" />
-          </span>
-        )}
-      </span>
-      <span
-        className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-200 ${
-          showControls
-            ? 'opacity-100'
-            : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
-        }`}
-      >
-        <IconButton
-          icon={<Maximize />}
-          label="Enter fullscreen"
-          tooltip="Fullscreen"
-          variant="secondary"
-          onClick={enterFullscreen}
+      <section className="relative h-full w-full">
+        <img
+          src={liveSnapshotUrl}
+          alt=""
+          aria-hidden="true"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = porchImage;
+          }}
+          className="absolute inset-0 h-full w-full object-cover"
         />
-      </span>
-    </section>
+        <video
+          ref={videoRef}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+          src={liveStreamUrl}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          poster={liveSnapshotUrl}
+          onPlaying={() => setIsPlaying(true)}
+          aria-label="Front Porch live stream"
+        />
+        <span className="absolute bottom-3 right-3 flex size-2.5 items-center justify-center">
+          {!isPlaying ? (
+            <Spinner size="sm" shade="onMedia" aria-label="Loading live stream" />
+          ) : (
+            <span
+              className="relative inline-flex size-2.5 items-center justify-center"
+              role="status"
+              aria-label="Live"
+            >
+              <span
+                className="absolute inset-0 animate-pulse rounded-full border-2 border-error"
+                aria-hidden="true"
+              />
+              <span className="size-1 rounded-full bg-error" aria-hidden="true" />
+            </span>
+          )}
+        </span>
+        <span
+          className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-200 ${
+            showControls
+              ? 'opacity-100'
+              : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
+          }`}
+        >
+          <IconButton
+            icon={<Maximize />}
+            label="Enter fullscreen"
+            tooltip="Fullscreen"
+            variant="secondary"
+            onClick={enterFullscreen}
+          />
+        </span>
+      </section>
+    </AspectRatio>
   );
 }
 
@@ -366,9 +378,7 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
         </section>
         <section className="mt-10">
           <Stack direction="horizontal" hAlign="between" vAlign="center" width="100%">
-            <Text as="p" className="text-secondary">
-              Earlier today
-            </Text>
+            <Heading level={3}>Detected motions</Heading>
             <IconButton
               icon={<ArrowRight />}
               label="All snapshots"
@@ -402,6 +412,37 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
               ))}
             </section>
           )}
+        </section>
+        <section className="mt-10">
+          <Heading level={3}>Other cameras</Heading>
+          <section className="mt-5 -mx-6">
+            <Carousel
+              gap={0}
+              padding={6}
+              hasButtons={false}
+              hasEdgeFade={false}
+              aria-label="Other cameras"
+            >
+              {cameraIds.filter((cameraId) => cameraId !== 'cam1').map((cameraId, index) => (
+                <button
+                  key={cameraId}
+                  type="button"
+                  className={`relative aspect-video w-72 shrink-0 overflow-hidden rounded-lg bg-muted text-left shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${index > 0 ? 'ml-5' : ''}`}
+                  onClick={() => navigate(`/cameras/${cameraId}`)}
+                  aria-label={`Open ${cameraTitles[cameraId]}`}
+                >
+                  <img
+                    src={`${liveHost}/${cameraId}-snapshot`}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-10 text-sm font-medium text-white">
+                    {cameraTitles[cameraId]}
+                  </span>
+                </button>
+              ))}
+            </Carousel>
+          </section>
         </section>
       </section>
     </main>
@@ -490,20 +531,43 @@ function HistoryScreen({
   );
 }
 
-function DetailScreen({ snapshots, isLoading }) {
+function DetailScreen({
+  isLoading = false,
+  videoUrl,
+  posterUrl,
+  videoLabel,
+  closePath,
+  closeLabel,
+  unavailableTitle,
+  unavailableMessage,
+  footerContent,
+  autoPlay = false,
+  muted = false,
+  preload = 'metadata',
+}) {
   const navigate = useNavigate();
-  const { snapshotId } = useParams();
-  const snapshot = snapshots.find((item) => String(item.id) === snapshotId);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!autoPlay || !videoUrl) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = muted;
+    video.load();
+    video.play().catch(() => {});
+  }, [autoPlay, muted, videoUrl]);
+
   if (isLoading)
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-hidden bg-black text-white">
         <header className="flex items-center justify-end p-5">
           <IconButton
             icon={<X />}
-            label="Close snapshot"
+            label={closeLabel}
             tooltip="Close"
             variant="ghost"
-            onClick={() => navigate('/snapshots')}
+            onClick={() => navigate(closePath)}
           />
         </header>
         <section className="flex flex-1 items-center" aria-label="Loading clip" aria-busy="true">
@@ -521,77 +585,139 @@ function DetailScreen({ snapshots, isLoading }) {
         </footer>
       </main>
     );
-  if (!snapshot)
+  if (!videoUrl)
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-surface px-6 py-7">
         <IconButton
           icon={<ArrowLeft />}
-          label="Back to snapshots"
+          label={closeLabel}
           tooltip="Back"
           variant="ghost"
-          onClick={() => navigate('/snapshots')}
+          onClick={() => navigate(closePath)}
         />
         <Heading level={2} className="mt-10">
-          Clip unavailable
+          {unavailableTitle}
         </Heading>
         <Text as="p" className="mt-3 text-secondary">
-          Return to the history and choose a loaded clip.
+          {unavailableMessage}
         </Text>
       </main>
     );
-  const alertPosterUrl = snapshot.videoUrl.replace(/\.mp4$/i, '-alert.jpg');
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-hidden bg-black text-white">
       <header className="flex items-center justify-end p-5">
         <IconButton
           icon={<X />}
-          label="Close snapshot"
+          label={closeLabel}
           tooltip="Close"
           variant="ghost"
-          onClick={() => navigate('/snapshots')}
+          onClick={() => navigate(closePath)}
         />
       </header>
       <section className="flex flex-1 items-center">
         <video
+          ref={videoRef}
           className="w-full object-cover"
           controls
+          autoPlay={autoPlay}
+          muted={muted}
           playsInline
-          preload="metadata"
-          poster={alertPosterUrl}
-          aria-label="Front porch camera recording"
+          preload={preload}
+          poster={posterUrl}
+          src={videoUrl}
+          aria-label={videoLabel}
         >
-          <source src={snapshot.videoUrl} type="video/mp4" />
           Your browser does not support embedded video.
         </video>
       </section>
-      <footer className="flex items-end justify-between bg-gradient-to-b from-neutral-900 to-black px-7 pb-8 pt-7">
-        <section>
-          <Text as="p" className="text-sm font-semibold text-secondary">
-            Captured
-          </Text>
-          <Heading level={2} className="mt-2 text-white">
-            {snapshot.date}
-          </Heading>
-          <Text as="p" className="mt-1 text-xl text-white">
-            {snapshot.time}
-          </Text>
-        </section>
-        <section className="flex gap-3">
-          <IconButton
-            icon={<Download />}
-            label="Download snapshot"
-            tooltip="Download"
-            variant="secondary"
-          />
-          <IconButton
-            icon={<Share2 />}
-            label="Share snapshot"
-            tooltip="Share"
-            variant="secondary"
-          />
-        </section>
-      </footer>
+      {footerContent && (
+        <footer className="flex items-end justify-between bg-gradient-to-b from-neutral-900 to-black px-7 pb-8 pt-7">
+          {footerContent}
+        </footer>
+      )}
     </main>
+  );
+}
+
+function SnapshotDetailRoute({ snapshots, isLoading }) {
+  const { snapshotId } = useParams();
+  const snapshot = snapshots.find((item) => String(item.id) === snapshotId);
+
+  return (
+    <DetailScreen
+      isLoading={isLoading}
+      videoUrl={snapshot?.videoUrl}
+      posterUrl={snapshot?.videoUrl.replace(/\.mp4$/i, '-alert.jpg')}
+      videoLabel="Front porch camera recording"
+      closePath="/snapshots"
+      closeLabel="Close snapshot"
+      unavailableTitle="Clip unavailable"
+      unavailableMessage="Return to the history and choose a loaded clip."
+      footerContent={
+        snapshot && (
+          <>
+            <section>
+              <Text as="p" className="text-sm font-semibold text-secondary">
+                Captured
+              </Text>
+              <Heading level={2} className="mt-2 text-white">
+                {snapshot.date}
+              </Heading>
+              <Text as="p" className="mt-1 text-xl text-white">
+                {snapshot.time}
+              </Text>
+            </section>
+            <section className="flex gap-3">
+              <IconButton
+                icon={<Download />}
+                label="Download snapshot"
+                tooltip="Download"
+                variant="secondary"
+              />
+              <IconButton
+                icon={<Share2 />}
+                label="Share snapshot"
+                tooltip="Share"
+                variant="secondary"
+              />
+            </section>
+          </>
+        )
+      }
+    />
+  );
+}
+
+function CameraDetailRoute() {
+  const { cameraId } = useParams();
+  const isAvailableCamera = cameraIds.includes(cameraId);
+  const cameraTitle = cameraTitles[cameraId] ?? cameraId;
+
+  return (
+    <DetailScreen
+      videoUrl={isAvailableCamera ? `${liveHost}/${cameraId}-live` : null}
+      posterUrl={cameraDetailPosterUrl}
+      videoLabel={`${cameraTitle} live stream`}
+      closePath="/"
+      closeLabel="Close camera"
+      unavailableTitle="Camera unavailable"
+      unavailableMessage="Return home and choose an available camera."
+      autoPlay
+      muted
+      preload="auto"
+      footerContent={
+        isAvailableCamera && (
+          <section>
+            <Text as="p" className="text-sm font-semibold text-secondary">
+              Live Camera
+            </Text>
+            <Heading level={2} className="mt-2 text-white">
+              {cameraTitle}
+            </Heading>
+          </section>
+        )
+      }
+    />
   );
 }
 
@@ -607,9 +733,10 @@ function App() {
         <Route path="/" element={<HomeScreen {...screenProps} />} />
         <Route path="/snapshots" element={<HistoryScreen {...screenProps} />} />
         <Route path="/settings" element={<SettingsScreen {...push} />} />
+        <Route path="/cameras/:cameraId" element={<CameraDetailRoute />} />
         <Route
           path="/snapshots/:snapshotId"
-          element={<DetailScreen snapshots={clips.snapshots} isLoading={clips.isLoading} />}
+          element={<SnapshotDetailRoute snapshots={clips.snapshots} isLoading={clips.isLoading} />}
         />
         <Route path="*" element={<HomeScreen {...screenProps} />} />
       </Routes>
