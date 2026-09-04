@@ -7,6 +7,7 @@ function requireEnv(name) {
 const clipsHost = requireEnv('VITE_CLIPS_HOST');
 const liveHost = requireEnv('VITE_LIVE_HOST');
 const cameraId = import.meta.env.VITE_CAMERA_ID ?? 'cam1';
+const buildCommitSha = import.meta.env.VITE_BUILD_COMMIT_SHA;
 
 export const config = {
   clipsApiUrl: requireEnv('VITE_CLIPS_API_URL'),
@@ -15,4 +16,5 @@ export const config = {
   liveStreamUrl: `${liveHost}/${cameraId}-live`,
   liveSnapshotUrl: `${liveHost}/${cameraId}-snapshot`,
   porchImage: '/images/front-porch.png',
+  buildCommitSha,
 };

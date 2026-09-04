@@ -37,6 +37,7 @@ jobs:
           VITE_CLIPS_HOST: ${{ vars.VITE_CLIPS_HOST }}
           VITE_LIVE_HOST: ${{ vars.VITE_LIVE_HOST }}
           VITE_CAMERA_ID: ${{ vars.VITE_CAMERA_ID }}
+          VITE_BUILD_COMMIT_SHA: ${{ github.sha }}
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html

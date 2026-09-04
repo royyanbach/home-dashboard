@@ -76,6 +76,7 @@ Copy `.env.example` to `.env` and set:
 | `VITE_CLIPS_HOST`     | Media host for video and thumbnail files         |
 | `VITE_LIVE_HOST`      | Live camera host for stream and snapshot         |
 | `VITE_CAMERA_ID`      | Camera slug for live paths (default: `cam1`)     |
+| `VITE_BUILD_COMMIT_SHA` | Build commit hash shown in Settings (optional) |
 
 Live URLs are `{VITE_LIVE_HOST}/{VITE_CAMERA_ID}-live` (MP4 stream) and `{VITE_LIVE_HOST}/{VITE_CAMERA_ID}-snapshot` (poster).
 

@@ -30,7 +30,7 @@ import './index.css';
 
 registerSW({ immediate: true });
 
-const { clipsApiUrl, clipsHost, liveHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
+const { buildCommitSha, clipsApiUrl, clipsHost, liveHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
 const cameraIds = ['cam1', 'cam2', 'cam3'];
 const cameraTitles = {
   cam1: 'Front Porch',
@@ -228,6 +228,21 @@ function SettingsScreen({ notificationsEnabled, isPushLoading, pushMessage, setN
           </Stack>
         </Card>
       </section>
+      {buildCommitSha && (
+        <section className="px-6 py-4">
+          <Heading level={3}>Build</Heading>
+          <Card width="100%" className="mt-4">
+            <Stack gap={2}>
+              <Text type="label" display="block">
+                Commit hash
+              </Text>
+              <Text type="code" display="block" wordBreak="break-all">
+                {buildCommitSha}
+              </Text>
+            </Stack>
+          </Card>
+        </section>
+      )}
     </main>
   );
 }
