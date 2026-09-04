@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Theme } from '@astryxdesign/core';
@@ -13,7 +13,7 @@ import { Switch } from '@astryxdesign/core/Switch';
 import { Text } from '@astryxdesign/core/Text';
 import { TopNav } from '@astryxdesign/core/TopNav';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
-import { ArrowLeft, ArrowRight, Download, Settings, Share2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Maximize, Settings, Share2, X } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 import { config } from './config.js';
 import {
@@ -28,8 +28,7 @@ import './index.css';
 
 registerSW({ immediate: true });
 
-const { clipsApiUrl, clipsHost, latestFrameUrl, porchImage } = config;
-const latestFrame = { id: 'latest-frame', time: 'Live view', group: 'Today', featured: true };
+const { clipsApiUrl, clipsHost, liveStreamUrl, liveSnapshotUrl, porchImage } = config;
 
 function getGroupLabel(capturedAt) {
   const today = new Date();
@@ -224,27 +223,99 @@ function SettingsScreen({ notificationsEnabled, isPushLoading, pushMessage, setN
   );
 }
 
-function SnapshotTile({
-  snapshot,
-  onOpen,
-  large = false,
-  imageUrl,
-  imageAlt = 'Front porch camera snapshot',
-  showRefreshSpinner = false,
-}) {
-  const resolvedImageUrl = imageUrl ?? snapshot.frameUrl ?? porchImage;
+function LiveView() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const videoRef = useRef(null);
+
+  const enterFullscreen = (event) => {
+    event.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+    if (typeof video.webkitEnterFullscreen === 'function') {
+      video.webkitEnterFullscreen();
+      return;
+    }
+    video.requestFullscreen?.();
+  };
+
+  return (
+    <section
+      className="group relative aspect-video w-full overflow-hidden rounded-lg bg-muted shadow-sm"
+      aria-label="Front Porch live camera"
+      onClick={() => setShowControls((visible) => !visible)}
+    >
+      <img
+        src={liveSnapshotUrl}
+        alt=""
+        aria-hidden="true"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = porchImage;
+        }}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <video
+        ref={videoRef}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+        src={liveStreamUrl}
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        poster={liveSnapshotUrl}
+        onPlaying={() => setIsPlaying(true)}
+        aria-label="Front Porch live stream"
+      />
+      <span className="absolute bottom-3 right-3 flex size-2.5 items-center justify-center">
+        {!isPlaying ? (
+          <Spinner size="sm" shade="onMedia" aria-label="Loading live stream" />
+        ) : (
+          <span
+            className="relative inline-flex size-2.5 items-center justify-center"
+            role="status"
+            aria-label="Live"
+          >
+            <span
+              className="absolute inset-0 animate-pulse rounded-full border-2 border-error"
+              aria-hidden="true"
+            />
+            <span className="size-1 rounded-full bg-error" aria-hidden="true" />
+          </span>
+        )}
+      </span>
+      <span
+        className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-200 ${
+          showControls
+            ? 'opacity-100'
+            : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
+        }`}
+      >
+        <IconButton
+          icon={<Maximize />}
+          label="Enter fullscreen"
+          tooltip="Fullscreen"
+          variant="secondary"
+          onClick={enterFullscreen}
+        />
+      </span>
+    </section>
+  );
+}
+
+function SnapshotTile({ snapshot, onOpen }) {
+  const resolvedImageUrl = snapshot.frameUrl ?? porchImage;
 
   return (
     <button
       type="button"
       onClick={() => onOpen(snapshot)}
-      className={`group relative overflow-hidden rounded-lg bg-muted text-left shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${large ? 'aspect-video w-full' : 'aspect-square w-full'}`}
+      className="group relative aspect-square w-full overflow-hidden rounded-lg bg-muted text-left shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       aria-label={`Open snapshot captured at ${snapshot.time}`}
-      aria-busy={showRefreshSpinner || undefined}
     >
       <img
         src={resolvedImageUrl}
-        alt={imageAlt}
+        alt="Front porch camera snapshot"
         onError={(event) => {
           event.currentTarget.onerror = null;
           event.currentTarget.src = porchImage;
@@ -254,11 +325,6 @@ function SnapshotTile({
       <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-10 text-sm font-medium text-white">
         {snapshot.time}
       </span>
-      {showRefreshSpinner && (
-        <span className="absolute bottom-3 right-3">
-          <Spinner size="sm" shade="onMedia" aria-label="Refreshing latest frame" />
-        </span>
-      )}
     </button>
   );
 }
@@ -281,21 +347,8 @@ function SnapshotGridSkeleton({ count = 2 }) {
 
 function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
   const navigate = useNavigate();
-  const [latestFrameUrlWithCacheBust] = useState(
-    () => `${latestFrameUrl}?cacheBust=${Math.random().toString(36).slice(2)}`,
-  );
-  const [useCacheBustedFrame, setUseCacheBustedFrame] = useState(false);
   const earlierSnapshots = snapshots.slice(0, 2);
-  const displayedLatestFrameUrl = useCacheBustedFrame
-    ? latestFrameUrlWithCacheBust
-    : latestFrameUrl;
-  const openLatestFrame = () =>
-    window.open(displayedLatestFrameUrl, '_blank', 'noopener,noreferrer');
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setUseCacheBustedFrame(true), 15000);
-    return () => window.clearTimeout(timer);
-  }, []);
   return (
     <main className="mx-auto h-dvh w-full max-w-md overflow-y-auto bg-surface">
       <TopNav
@@ -308,20 +361,22 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
         <section className="mt-3">
           <Heading level={2}>Front Porch</Heading>
           <section className="mt-6">
-            <SnapshotTile
-              snapshot={latestFrame}
-              onOpen={openLatestFrame}
-              imageUrl={displayedLatestFrameUrl}
-              imageAlt="Latest Front Porch camera frame"
-              showRefreshSpinner={!useCacheBustedFrame}
-              large
-            />
+            <LiveView />
           </section>
         </section>
         <section className="mt-10">
-          <Text as="p" className="text-secondary">
-            Earlier today
-          </Text>
+          <Stack direction="horizontal" hAlign="between" vAlign="center" width="100%">
+            <Text as="p" className="text-secondary">
+              Earlier today
+            </Text>
+            <IconButton
+              icon={<ArrowRight />}
+              label="All snapshots"
+              tooltip="All snapshots"
+              variant="ghost"
+              onClick={() => navigate('/snapshots')}
+            />
+          </Stack>
           {isLoading && <SnapshotGridSkeleton />}
           {error && (
             <section className="mt-5">
@@ -347,14 +402,6 @@ function HomeScreen({ snapshots, isLoading, error, retry, openSettings }) {
               ))}
             </section>
           )}
-          <footer className="pt-8">
-            <Button
-              label="All snapshots"
-              endContent={<ArrowRight />}
-              variant="ghost"
-              onClick={() => navigate('/snapshots')}
-            />
-          </footer>
         </section>
       </section>
     </main>

@@ -35,6 +35,7 @@ jobs:
         env:
           VITE_CLIPS_API_URL: ${{ vars.VITE_CLIPS_API_URL }}
           VITE_CLIPS_HOST: ${{ vars.VITE_CLIPS_HOST }}
+          VITE_LIVE_HOST: ${{ vars.VITE_LIVE_HOST }}
           VITE_CAMERA_ID: ${{ vars.VITE_CAMERA_ID }}
 
       - name: Add SPA fallback

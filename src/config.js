@@ -5,11 +5,13 @@ function requireEnv(name) {
 }
 
 const clipsHost = requireEnv('VITE_CLIPS_HOST');
+const liveHost = requireEnv('VITE_LIVE_HOST');
 const cameraId = import.meta.env.VITE_CAMERA_ID ?? 'cam1';
 
 export const config = {
   clipsApiUrl: requireEnv('VITE_CLIPS_API_URL'),
   clipsHost,
-  latestFrameUrl: `${clipsHost}/clips/${cameraId}/latest-frame.jpg`,
+  liveStreamUrl: `${liveHost}/${cameraId}-live`,
+  liveSnapshotUrl: `${liveHost}/${cameraId}-snapshot`,
   porchImage: '/images/front-porch.png',
 };

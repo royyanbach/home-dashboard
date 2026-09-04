@@ -50,7 +50,7 @@ PWA icons live in `public/` (`pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-
 
 | Path                    | Screen                                      |
 | ----------------------- | ------------------------------------------- |
-| `/`                     | Home — live frame and recent snapshots      |
+| `/`                     | Home — live stream and recent snapshots     |
 | `/snapshots`            | History — clips grouped by day              |
 | `/snapshots/:snapshotId`| Detail — full-screen video with metadata    |
 
@@ -74,9 +74,10 @@ Copy `.env.example` to `.env` and set:
 | --------------------- | ------------------------------------------------ |
 | `VITE_CLIPS_API_URL`  | Paginated clips API base URL                     |
 | `VITE_CLIPS_HOST`     | Media host for video and thumbnail files         |
-| `VITE_CAMERA_ID`      | Camera slug for the live frame (default: `cam1`) |
+| `VITE_LIVE_HOST`      | Live camera host for stream and snapshot         |
+| `VITE_CAMERA_ID`      | Camera slug for live paths (default: `cam1`)     |
 
-The live frame URL is derived as `{VITE_CLIPS_HOST}/clips/{VITE_CAMERA_ID}/latest-frame.jpg`.
+Live URLs are `{VITE_LIVE_HOST}/{VITE_CAMERA_ID}-live` (MP4 stream) and `{VITE_LIVE_HOST}/{VITE_CAMERA_ID}-snapshot` (poster).
 
 Vite exposes only `VITE_*` variables to the client. Restart the dev server after changing `.env`.
 

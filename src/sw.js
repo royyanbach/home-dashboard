@@ -26,9 +26,10 @@ if (clipsApiUrl) {
 }
 
 if (clipsHost) {
+  // Cache thumbnails/frames only — never cache video clips.
   registerRoute(
     ({ url }) =>
-      url.href.startsWith(clipsHost) && /\.(?:jpg|jpeg|png|mp4)$/i.test(url.pathname),
+      url.href.startsWith(clipsHost) && /\.(?:jpg|jpeg|png)$/i.test(url.pathname),
     new NetworkFirst({
       cacheName: 'clips-media',
       networkTimeoutSeconds: 10,
